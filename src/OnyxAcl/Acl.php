@@ -40,6 +40,7 @@ class Acl{
     protected $storage;
     protected $authservice;
     protected $serviceManager;
+    public $message; 
 
 
 
@@ -71,9 +72,8 @@ class Acl{
         $result = $this->getAuthService()->authenticate();
         foreach($result->getMessages() as $message)
         {
-            //save message temporary into flashmessenger
-            \Zend\Debug\Debug::dump($message);
-            $this->flashmessenger()->addMessage($message);
+            $this->message = $message;
+            return false;
         }
         
         $output = $result->isValid();
