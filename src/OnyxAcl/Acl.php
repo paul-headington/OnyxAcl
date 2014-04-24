@@ -37,6 +37,87 @@ namespace OnyxAcl;
  */
 class Acl{
     
+    protected $storage;
+    protected $authservice;
+    protected $serviceManager;
+
+
+
+    public function __construct($sm = null) {
+        if($this->staticSalt == null){
+            throw new \Exception("Onyx Acl needs to be initalised with the service mananger");
+        }
+        $this->serviceManager = $sm;
+    }
+    
+    public function checkAuth(){
+        return $this->getAuthService()->hasIdentity();
+    }
+    
+    public function authenticate($data = array()){
+        if(!isset($data['password'])){
+            throw new \Exception("No password set");
+        }
+        $config = $sm->get('Config');
+        $identityColumn = $config['user_settings']['identity_column'];
+        if(!isset($data[$identityColumn])){
+            throw new \Exception("No ".$identityColumn." set");
+        }
+        //check authentication...
+        $this->getAuthService()->getAdapter()
+                               ->setIdentity($data[$identityColumn])
+                               ->setCredential($data['password']);
+
+        $result = $this->getAuthService()->authenticate();
+        foreach($result->getMessages() as $message)
+        {
+            //save message temporary into flashmessenger
+            \Zend\Debug\Debug::dump($message);
+            $this->flashmessenger()->addMessage($message);
+        }
+        
+        $output = $result->isValid();
+
+        if ($output) {            
+            //check if it has rememberMe :
+            if (isset($data['remeber'])) {
+                if($data['remeber'] == 1){
+                    $this->getSessionStorage()
+                         ->setRememberMe(1);
+                    //set storage again 
+                    $this->getAuthService()->setStorage($this->getSessionStorage());
+                }
+            }
+            $this->getAuthService()->getStorage()->write($data[$identityColumn]);
+        }
+        return $output;
+    }
+    
+    public function logout(){
+        $this->getSessionStorage()->forgetMe();
+        $this->getAuthService()->clearIdentity();
+    }
+
+    private function getAuthService()
+    {
+        if (! $this->authservice) {
+            $this->authservice = $this->serviceManager
+                                      ->get('AuthService');
+        }
+         
+        return $this->authservice;
+    }
+     
+    private function getSessionStorage()
+    {
+        if (! $this->storage) {
+            $this->storage = $this->serviceManager
+                                  ->get('SanAuth\Model\MyAuthStorage');
+        }
+         
+        return $this->storage;
+    }
+    
 }
 
 ?>

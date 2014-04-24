@@ -11,6 +11,10 @@ namespace OnyxAcl;
 
 use Zend\Mvc\ModuleRouteListener;
 use Zend\Mvc\MvcEvent;
+use Zend\ModuleManager\Feature\AutoloaderProviderInterface;
+use Zend\Authentication\Storage;
+use Zend\Authentication\AuthenticationService;
+use Zend\Authentication\Adapter\DbTable as DbTableAuthAdapter;
 
 class Module
 {
@@ -35,6 +39,33 @@ class Module
                 'namespaces' => array(
                     __NAMESPACE__ => __DIR__ . '/src/' . __NAMESPACE__,
                 ),
+            ),
+        );
+    }
+    
+    public function getServiceConfig()
+    {
+        return array(
+            'factories'=>array(
+                'OnyxAcl\AuthStorage' => function($sm){
+                    return new \OnyxAcl\AuthStorage('OnyxAcl_Auth'); 
+                },         
+                'AuthService' => function($sm) {
+                    $config = $sm->get('Config');
+                    $dbAdapter           = $sm->get('Zend\Db\Adapter\Adapter');
+                    $dbTableAuthAdapter  = new DbTableAuthAdapter($dbAdapter);
+                    $dbTableAuthAdapter
+                        ->setTableName($config['user_settings']['auth_table'])
+                        ->setIdentityColumn($config['user_settings']['identity_column'])
+                        ->setCredentialColumn($config['user_settings']['credential_column'])
+                        ->setCredentialTreatment("MD5(CONCAT('".$config['user_settings']['static_salt']. "', ?, salt)) AND isactive = 1");
+
+                    $authService = new AuthenticationService();
+                    $authService->setAdapter($dbTableAuthAdapter);
+                    $authService->setStorage($sm->get('OnyxAcl\AuthStorage'));
+
+                    return $authService;
+                },
             ),
         );
     }
@@ -95,8 +126,7 @@ class Module
         
         //echo "allow";
         //exit();
-    }
-    
+    }    
     
     //this function can be used to pull roles and access from db instead of array file 
     // not currently used
