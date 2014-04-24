@@ -73,7 +73,6 @@ class Acl{
         foreach($result->getMessages() as $message)
         {
             $this->message = $message;
-            return false;
         }
         
         $output = $result->isValid();
