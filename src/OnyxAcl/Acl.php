@@ -55,6 +55,10 @@ class Acl{
         return $this->getAuthService()->hasIdentity();
     }
     
+    public function getIdentity(){
+        return $this->getAuthService()->getIdentity();
+    }
+
     public function authenticate($data = array()){
         if(!isset($data['password'])){
             throw new \Exception("No password set");
@@ -116,7 +120,7 @@ class Acl{
     {
         if (! $this->storage) {
             $this->storage = $this->serviceManager
-                                  ->get('SanAuth\Model\MyAuthStorage');
+                                  ->get('OnyxAcl\AuthStorage');
         }
          
         return $this->storage;
