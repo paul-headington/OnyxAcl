@@ -88,7 +88,12 @@ class Acl{
                     $this->getAuthService()->setStorage($this->getSessionStorage());
                 }
             }
-            $this->getAuthService()->getStorage()->write($data[$identityColumn]);
+            $userData = $this->getAuthService()->getAdapter()
+                                   ->getResultRowObject(
+                                    null,
+                                    'password'
+                                    );
+            $this->getAuthService()->getStorage()->write($userData);
         }
         return $output;
     }
