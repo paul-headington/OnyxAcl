@@ -58,7 +58,7 @@ class Module
                         ->setTableName($config['user_settings']['auth_table'])
                         ->setIdentityColumn($config['user_settings']['identity_column'])
                         ->setCredentialColumn($config['user_settings']['credential_column'])
-                        ->setCredentialTreatment("MD5(CONCAT('".$config['user_settings']['static_salt']. "', ?, salt)) AND isactive = 1");
+                        ->setCredentialTreatment("MD5(CONCAT(salt, ?, '".$config['user_settings']['static_salt']. "')) AND isactive = 1");
 
                     $authService = new AuthenticationService();
                     $authService->setAdapter($dbTableAuthAdapter);
