@@ -44,7 +44,7 @@ class Acl{
 
 
     public function __construct($sm = null) {
-        if($this->staticSalt == null){
+        if($sm == null){
             throw new \Exception("Onyx Acl needs to be initalised with the service mananger");
         }
         $this->serviceManager = $sm;
@@ -58,7 +58,7 @@ class Acl{
         if(!isset($data['password'])){
             throw new \Exception("No password set");
         }
-        $config = $sm->get('Config');
+        $config = $this->serviceManager->get('Config');
         $identityColumn = $config['user_settings']['identity_column'];
         if(!isset($data[$identityColumn])){
             throw new \Exception("No ".$identityColumn." set");
