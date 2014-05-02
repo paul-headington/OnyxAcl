@@ -81,9 +81,9 @@ class Module
         //swap this with $roles = $this->getDbRoles($e); for db accesss retrieve
         $config = $e->getApplication()->getServiceManager()->get('config');
         $roles = $config['aclRoles'];
-        $this->ACL_ERROR = $config['aclSetting']['errorMessage'];
-        $this->loadFromDb = $config['aclSetting']['loadFromDb'];
-        $this->tableName = $config['aclSetting']['tableName'];
+        $this->ACL_ERROR = $config['aclSettings']['errorMessage'];
+        $this->loadFromDb = $config['aclSettings']['loadFromDb'];
+        $this->tableName = $config['aclSettings']['tableName'];
         
         if($this->loadFromDb){
             $roles = $this->getDbRoles($e);// for db accesss retrieve
