@@ -11,6 +11,7 @@ namespace OnyxAcl;
 
 use Zend\Mvc\ModuleRouteListener;
 use Zend\Mvc\MvcEvent;
+use Zend\View\Model\ViewModel;
 use Zend\ModuleManager\Feature\AutoloaderProviderInterface;
 use Zend\Authentication\Storage;
 use Zend\Authentication\AuthenticationService;
@@ -18,6 +19,10 @@ use Zend\Authentication\Adapter\DbTable as DbTableAuthAdapter;
 
 class Module
 {
+    protected $ACL_ERROR = 'Access denied to that resource';
+    protected $loadFromDb = false;
+    protected $tableName = 'acl';
+    
     public function onBootstrap(MvcEvent $e)
     {
         $eventManager        = $e->getApplication()->getEventManager();
@@ -25,6 +30,7 @@ class Module
         $moduleRouteListener->attach($eventManager);
         $this->initAcl($e);
         $e->getApplication()->getEventManager()->attach('route', array($this, 'checkAcl'));
+        $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_DISPATCH_ERROR, array($this, 'aclError'));
     }
 
     public function getConfig()
@@ -73,7 +79,16 @@ class Module
     public function initAcl(MvcEvent $e) { 
         $acl = new \Zend\Permissions\Acl\Acl();
         //swap this with $roles = $this->getDbRoles($e); for db accesss retrieve
-        $roles = include __DIR__ . '/config/module.acl.roles.php';
+        $config = $e->getApplication()->getServiceManager()->get('config');
+        $roles = $config['aclRoles'];
+        $this->ACL_ERROR = $config['aclSetting']['errorMessage'];
+        $this->loadFromDb = $config['aclSetting']['loadFromDb'];
+        $this->tableName = $config['aclSetting']['tableName'];
+        
+        if($this->loadFromDb){
+            $roles = $this->getDbRoles($e);// for db accesss retrieve
+        }
+        
         $allResources = array();
         foreach ($roles as $role => $resources) {
 
@@ -94,34 +109,66 @@ class Module
                 $acl->allow($role, $resource);
             }
         }
-        //testing
-       // var_dump($acl->isAllowed('admin','home'));
-        //true
-        //exit();
 
         //setting to view
         $e->getViewModel()->acl = $acl;
 
     }
+    
+    public function aclError(MvcEvent $event){
+        $error = $event->getError();
+        if (empty($error) || $error != $this->ACL_ERROR) {
+            return;
+        }
+
+        $result = $event->getResult();
+
+        if ($result instanceof StdResponse) {
+            return;
+        }
+
+        $baseModel = new ViewModel();
+        $baseModel->setTemplate('layout/layout');
+
+        $model = new ViewModel();
+        $model->setTemplate('error/403');
+
+        $baseModel->addChild($model);
+        $baseModel->setTerminal(true);
+
+        $event->setViewModel($baseModel);
+
+        $response = $event->getResponse();
+        $response->setStatusCode(403);
+
+        $event->setResponse($response);
+        $event->setResult($baseModel);
+
+        return false;
+    }
 
     public function checkAcl(MvcEvent $e) {
         $route = $e->getRouteMatch()->getMatchedRouteName();
-        //you set your role
+        //you set your role this needs to load from user session
         $userRole = 'guest';
+        $denied = FALSE;
         //echo "route: " . $route . "<br/>";
         //var_dump($e->getViewModel()->acl->hasResource($route));
-        //if (!$e -> getViewModel() -> acl -> isAllowed($userRole, $route)) {
-        if($e->getViewModel()->acl->hasResource($route) && !$e->getViewModel()->acl->isAllowed($userRole, $route)) {
-            $response = $e->getResponse();
-            //location to page or what ever
-            //echo "denied";
-            //exit();
-            $response->getHeaders()->addHeaderLine('Location', $e->getRequest()->getBaseUrl() . '/403');
-            $response->setStatusCode(403);  
-            \Zend\Debug\Debug::dump($response);
-            exit();
-            return;
+        if($e->getViewModel()->acl->hasResource($route)) {
+            if(!$e->getViewModel()->acl->isAllowed($userRole, $route)){
+                $denied = TRUE;
+            }
+        }else{
+            $denied = TRUE;
+        }
+        
+        if($denied){
+                $app = $e->getTarget();
+                $route = $e->getRouteMatch();
 
+                $e->setError($this->ACL_ERROR) 
+                  ->setParam('route', $route->getMatchedRouteName());
+                $app->getEventManager()->trigger('dispatch.error', $e);
         }
         
         //echo "allow";
@@ -133,7 +180,7 @@ class Module
     public function getDbRoles(MvcEvent $e){
         // I take it that your adapter is already configured
         $dbAdapter = $e->getApplication()->getServiceManager()->get('Zend\Db\Adapter\Adapter');
-        $results = $dbAdapter->query('SELECT * FROM acl');
+        $results = $dbAdapter->query('SELECT * FROM '.$this->tableName);
         // making the roles array
         $roles = array();
         foreach($results as $result){
