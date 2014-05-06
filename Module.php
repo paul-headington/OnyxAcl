@@ -22,6 +22,7 @@ class Module
     protected $ACL_ERROR = 'Access denied to that resource';
     protected $loadFromDb = false;
     protected $tableName = 'acl';
+    protected $denyUnlisted = FALSE;
     
     public function onBootstrap(MvcEvent $e)
     {
@@ -84,6 +85,7 @@ class Module
         $this->ACL_ERROR = $config['aclSettings']['errorMessage'];
         $this->loadFromDb = $config['aclSettings']['loadFromDb'];
         $this->tableName = $config['aclSettings']['tableName'];
+        $this->denyUnlisted = $config['aclSettings']['denyUnlisted'];
         
         if($this->loadFromDb){
             $roles = $this->getDbRoles($e);// for db accesss retrieve
@@ -159,7 +161,7 @@ class Module
                 $denied = TRUE;
             }
         }else{
-            $denied = TRUE;
+            $denied = $this->denyUnlisted;
         }
         
         if($denied){

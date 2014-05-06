@@ -19,7 +19,9 @@ return array(
     "aclSettings" => array(
         "errorMessage" => 'Access denied to that resource',
         "loadFromDb" => false,
-        "tableName" => 'acl'
+        "tableName" => 'acl',
+        "denyUnlisted" => false,
+        "loginRoute" => 'dashboard'
     )
 );
 ?>
