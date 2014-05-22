@@ -12,8 +12,6 @@ namespace OnyxAcl;
 use Zend\Mvc\ModuleRouteListener;
 use Zend\Mvc\MvcEvent;
 use Zend\View\Model\ViewModel;
-use Zend\ModuleManager\Feature\AutoloaderProviderInterface;
-use Zend\Authentication\Storage;
 use Zend\Authentication\AuthenticationService;
 use Zend\Authentication\Adapter\DbTable as DbTableAuthAdapter;
 
@@ -70,7 +68,6 @@ class Module
                     $authService = new AuthenticationService();
                     $authService->setAdapter($dbTableAuthAdapter);
                     $authService->setStorage($sm->get('OnyxAcl\AuthStorage'));
-
                     return $authService;
                 },
             ),
@@ -84,7 +81,6 @@ class Module
         $roles = $config['aclRoles'];
         $this->ACL_ERROR = $config['aclSettings']['errorMessage'];
         $this->loadFromDb = $config['aclSettings']['loadFromDb'];
-        $this->tableName = $config['aclSettings']['tableName'];
         $this->denyUnlisted = $config['aclSettings']['denyUnlisted'];
         
         if($this->loadFromDb){
@@ -103,8 +99,9 @@ class Module
             //adding resources
             foreach ($resources as $resource) {
                  // Edit 4
-                 if(!$acl->hasResource($resource))
+                 if(!$acl->hasResource($resource)){
                     $acl->addResource(new \Zend\Permissions\Acl\Resource\GenericResource($resource));
+                 }
             }
             //adding restrictions
             foreach ($allResources as $resource) {
@@ -182,11 +179,12 @@ class Module
     public function getDbRoles(MvcEvent $e){
         // I take it that your adapter is already configured
         $dbAdapter = $e->getApplication()->getServiceManager()->get('Zend\Db\Adapter\Adapter');
-        $results = $dbAdapter->query('SELECT * FROM '.$this->tableName);
+        $statement = $dbAdapter->query('SELECT acl_role.name, acl_resource.route FROM acl_resource INNER JOIN acl_role ON acl_role.id = acl_resource.roleid ORDER BY acl_role.inheritance_order');
+        $results = $statement->execute();
         // making the roles array
         $roles = array();
-        foreach($results as $result){
-            $roles[$result['user_role']][] = $result['resource'];
+        foreach($results as $result){            
+            $roles[$result['name']][] = $result['route'];
         }
         return $roles;
     }
