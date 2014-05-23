@@ -76,7 +76,6 @@ class Module
     
     public function initAcl(MvcEvent $e) { 
         $acl = new \Zend\Permissions\Acl\Acl();
-        //swap this with $roles = $this->getDbRoles($e); for db accesss retrieve
         $config = $e->getApplication()->getServiceManager()->get('config');
         $roles = $config['aclRoles'];
         $this->ACL_ERROR = $config['aclSettings']['errorMessage'];
@@ -98,7 +97,7 @@ class Module
 
             //adding resources
             foreach ($resources as $resource) {
-                 // Edit 4
+                
                  if(!$acl->hasResource($resource)){
                     $acl->addResource(new \Zend\Permissions\Acl\Resource\GenericResource($resource));
                  }
@@ -151,8 +150,7 @@ class Module
         //you set your role this needs to load from user session
         $userRole = 'guest';
         $denied = FALSE;
-        //echo "route: " . $route . "<br/>";
-        //var_dump($e->getViewModel()->acl->hasResource($route));
+        
         if($e->getViewModel()->acl->hasResource($route)) {
             if(!$e->getViewModel()->acl->isAllowed($userRole, $route)){
                 $denied = TRUE;
@@ -161,7 +159,7 @@ class Module
             $denied = $this->denyUnlisted;
         }
         
-        if($denied){
+        if($denied){      
                 $app = $e->getTarget();
                 $route = $e->getRouteMatch();
 
@@ -169,6 +167,7 @@ class Module
                   ->setParam('route', $route->getMatchedRouteName());
                 $app->getEventManager()->trigger('dispatch.error', $e);
         }
+        
         
         //echo "allow";
         //exit();
