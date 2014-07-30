@@ -1,6 +1,6 @@
 <?php
 return array(
-    "aclRoles" => array(
+    "onyx_acl_roles" => array(
         'guest' => array(
             'home',
             'system',
@@ -16,7 +16,7 @@ return array(
             'google/default'
             ),        
         ),
-    "aclSettings" => array(
+    "onyx_acl" => array(
         "errorMessage" => 'Access denied to that resource',
         "loadFromDb" => false,
         "tableName" => 'acl',
