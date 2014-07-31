@@ -64,7 +64,7 @@ class Acl{
             throw new \Exception("No password set");
         }
         $config = $this->serviceManager->get('Config');
-        $identityColumn = $config['user_settings']['identity_column'];
+        $identityColumn = $config['onyx_user']['identity_column'];
         if(!isset($data[$identityColumn])){
             throw new \Exception("No ".$identityColumn." set");
         }

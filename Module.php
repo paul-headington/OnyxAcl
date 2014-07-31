@@ -60,10 +60,10 @@ class Module
                     $dbAdapter           = $sm->get('Zend\Db\Adapter\Adapter');
                     $dbTableAuthAdapter  = new DbTableAuthAdapter($dbAdapter);
                     $dbTableAuthAdapter
-                        ->setTableName($config['user_settings']['auth_table'])
-                        ->setIdentityColumn($config['user_settings']['identity_column'])
-                        ->setCredentialColumn($config['user_settings']['credential_column'])
-                        ->setCredentialTreatment("SHA1(CONCAT(salt, ?, '".$config['user_settings']['static_salt']. "')) AND isactive = 1");
+                        ->setTableName($config['onyx_user']['auth_table'])
+                        ->setIdentityColumn($config['onyx_user']['identity_column'])
+                        ->setCredentialColumn($config['onyx_user']['credential_column'])
+                        ->setCredentialTreatment("SHA1(CONCAT(salt, ?, '".$config['onyx_user']['static_salt']. "')) AND isactive = 1");
 
                     $authService = new AuthenticationService();
                     $authService->setAdapter($dbTableAuthAdapter);
@@ -77,10 +77,10 @@ class Module
     public function initAcl(MvcEvent $e) { 
         $acl = new \Zend\Permissions\Acl\Acl();
         $config = $e->getApplication()->getServiceManager()->get('config');
-        $roles = $config['aclRoles'];
-        $this->ACL_ERROR = $config['aclSettings']['errorMessage'];
-        $this->loadFromDb = $config['aclSettings']['loadFromDb'];
-        $this->denyUnlisted = $config['aclSettings']['denyUnlisted'];
+        $roles = $config['onyx_acl_roles'];
+        $this->ACL_ERROR = $config['onyx_acl']['errorMessage'];
+        $this->loadFromDb = $config['onyx_acl']['loadFromDb'];
+        $this->denyUnlisted = $config['onyx_acl']['denyUnlisted'];
         
         if($this->loadFromDb){
             $roles = $this->getDbRoles($e);// for db accesss retrieve
