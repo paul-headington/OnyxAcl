@@ -7,7 +7,14 @@ return array(
             'system/createmodel', 
             'home/default',
             'about-us',
-            'dashboard'
+            'dashboard',
+            'user',
+            'register',
+            'about-us',
+            'sorter',
+            'sorter/index',
+            'modal'
+            
             ),
         'admin' => array(
             'admin',
@@ -18,9 +25,8 @@ return array(
         ),
     "onyx_acl" => array(
         "errorMessage" => 'Access denied to that resource',
-        "loadFromDb" => false,
-        "tableName" => 'acl',
-        "denyUnlisted" => false,
+        "loadFromDb" => true,
+        "denyUnlisted" => true,
         "loginRoute" => 'dashboard'
     )
 );
