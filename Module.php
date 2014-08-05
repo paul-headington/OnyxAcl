@@ -28,7 +28,7 @@ class Module
         $moduleRouteListener = new ModuleRouteListener();
         $moduleRouteListener->attach($eventManager);
         $this->initAcl($e);
-        $e->getApplication()->getEventManager()->attach('route', array($this, 'checkAcl'));
+        $e->getApplication()->getEventManager()->attach('dispatch', array($this, 'checkAcl'));
         $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_DISPATCH_ERROR, array($this, 'aclError'));
     }
 
@@ -78,9 +78,9 @@ class Module
         $acl = new \Zend\Permissions\Acl\Acl();
         $config = $e->getApplication()->getServiceManager()->get('config');
         $roles = $config['onyx_acl_roles'];
-        $this->ACL_ERROR = $config['onyx_acl']['errorMessage'];
-        $this->loadFromDb = $config['onyx_acl']['loadFromDb'];
-        $this->denyUnlisted = $config['onyx_acl']['denyUnlisted'];
+        $this->ACL_ERROR = $config['onyx_acl']['error_message'];
+        $this->loadFromDb = $config['onyx_acl']['load_from_db'];
+        $this->denyUnlisted = $config['onyx_acl']['deny_unlisted'];
         
         if($this->loadFromDb){
             $roles = $this->getDbRoles($e);// for db accesss retrieve
@@ -154,28 +154,29 @@ class Module
         if(isset($ident->role)){
             $userRole = $ident->role;
         }
-        $denied = FALSE;
-        
+        $denied = false;
+               
         if($e->getViewModel()->acl->hasResource($route)) {
             if(!$e->getViewModel()->acl->isAllowed($userRole, $route)){
-                $denied = TRUE;
+                $denied = true;
             }
         }else{
             $denied = $this->denyUnlisted;
         }
-        
-        if($denied){      
-                $app = $e->getTarget();
-                $route = $e->getRouteMatch();
-
-                $e->setError($this->ACL_ERROR) 
-                  ->setParam('route', $route->getMatchedRouteName());
-                $app->getEventManager()->trigger('dispatch.error', $e);
+        if($denied){  
+            $controller = $e->getTarget(); // grab Controller instance from event 
+            $app = $e->getTarget();
+            $route = $e->getRouteMatch();
+            if($ident == null){                
+                $controller->plugin('redirect')->toUrl('/user/login?backto=' . $route->getMatchedRouteName());
+                $e->stopPropagation();
+                return false;
+            }
+            $controller->plugin('redirect')->toUrl('/error/denied');
+            $e->stopPropagation();
+                return false;
         }
         
-        
-        //echo "allow";
-        //exit();
     }    
     
     //this function can be used to pull roles and access from db instead of array file 
