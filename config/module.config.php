@@ -4,6 +4,7 @@ return array(
         "errorMessage" => 'Access denied to that resource',
         "loadFromDb" => true,
         "denyUnlisted" => true,
-        "loginRoute" => 'dashboard'
+        "login_route" => 'dashboard',
+        "logout_route" => 'user',
     )
 );

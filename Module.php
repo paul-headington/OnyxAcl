@@ -148,7 +148,12 @@ class Module
     public function checkAcl(MvcEvent $e) {
         $route = $e->getRouteMatch()->getMatchedRouteName();
         //you set your role this needs to load from user session
+        $OnyxAcl = $e->getApplication()->getServiceManager()->get('OnyxAcl');
+        $ident = $OnyxAcl->getIdentity();
         $userRole = 'guest';
+        if(isset($ident->role)){
+            $userRole = $ident->role;
+        }
         $denied = FALSE;
         
         if($e->getViewModel()->acl->hasResource($route)) {
