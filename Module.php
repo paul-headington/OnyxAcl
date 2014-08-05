@@ -183,7 +183,7 @@ class Module
     public function getDbRoles(MvcEvent $e){
         // I take it that your adapter is already configured
         $dbAdapter = $e->getApplication()->getServiceManager()->get('Zend\Db\Adapter\Adapter');
-        $statement = $dbAdapter->query('SELECT acl_role.name, acl_resource.route FROM acl_resource INNER JOIN acl_role ON acl_role.id = acl_resource.roleid ORDER BY acl_role.inheritance_order');
+        $statement = $dbAdapter->query('SELECT onyx_acl_role.name, onyx_acl_resource.route FROM onyx_acl_resource INNER JOIN onyx_acl_role ON onyx_acl_role.id = onyx_acl_resource.roleid ORDER BY onyx_acl_role.inheritance_order');
         $results = $statement->execute();
         // making the roles array
         $roles = array();
