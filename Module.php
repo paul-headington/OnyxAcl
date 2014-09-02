@@ -28,7 +28,7 @@ class Module
         $moduleRouteListener = new ModuleRouteListener();
         $moduleRouteListener->attach($eventManager);
         $this->initAcl($e);
-        $e->getApplication()->getEventManager()->attach('dispatch', array($this, 'checkAcl'));
+        $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_DISPATCH, array($this, 'checkAcl'));
         $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_DISPATCH_ERROR, array($this, 'aclError'));
     }
 
@@ -70,47 +70,13 @@ class Module
                     $authService->setStorage($sm->get('OnyxAcl\AuthStorage'));
                     return $authService;
                 },
+                'OnyxAclFactory' => 'OnyxAcl\Service\AclFactory',
             ),
         );
     }
     
     public function initAcl(MvcEvent $e) { 
-        $acl = new \Zend\Permissions\Acl\Acl();
-        $config = $e->getApplication()->getServiceManager()->get('config');
-        $roles = $config['onyx_acl_roles'];
-        $this->ACL_ERROR = $config['onyx_acl']['error_message'];
-        $this->loadFromDb = $config['onyx_acl']['load_from_db'];
-        $this->denyUnlisted = $config['onyx_acl']['deny_unlisted'];
-        
-        if($this->loadFromDb){
-            $roles = $this->getDbRoles($e);// for db accesss retrieve
-        }
-        
-        $allResources = array();
-        foreach ($roles as $role => $resources) {
-
-            $role = new \Zend\Permissions\Acl\Role\GenericRole($role);
-            $acl->addRole($role);
-
-            //this allows for inheritance
-            $allResources = array_merge($resources, $allResources);
-
-            //adding resources
-            foreach ($resources as $resource) {
-                
-                 if(!$acl->hasResource($resource)){
-                    $acl->addResource(new \Zend\Permissions\Acl\Resource\GenericResource($resource));
-                 }
-            }
-            //adding restrictions
-            foreach ($allResources as $resource) {
-                $acl->allow($role, $resource);
-            }
-        }
-
-        //setting to view
-        $e->getViewModel()->acl = $acl;
-
+        $e->getApplication()->getServiceManager()->get('OnyxAclFactory');   
     }
     
     public function aclError(MvcEvent $event){
@@ -155,13 +121,16 @@ class Module
             $userRole = $ident->role;
         }
         $denied = false;
-               
-        if($e->getViewModel()->acl->hasResource($route)) {
-            if(!$e->getViewModel()->acl->isAllowed($userRole, $route)){
-                $denied = true;
+        try{
+            $acl = $e->getApplication()->getServiceManager()->get('OnyxAclFactory'); 
+            if($acl->hasResource($route)) {
+                if(!$acl->isAllowed($userRole, $route)){
+                    $denied = true;
+                }
+            }else{
+                $denied = $this->denyUnlisted;
             }
-        }else{
-            $denied = $this->denyUnlisted;
+        }catch(Exception $e){
         }
         if($denied){  
             $controller = $e->getTarget(); // grab Controller instance from event 
@@ -179,18 +148,5 @@ class Module
         
     }    
     
-    //this function can be used to pull roles and access from db instead of array file 
-    // not currently used
-    public function getDbRoles(MvcEvent $e){
-        // I take it that your adapter is already configured
-        $dbAdapter = $e->getApplication()->getServiceManager()->get('Zend\Db\Adapter\Adapter');
-        $statement = $dbAdapter->query('SELECT onyx_acl_role.name, onyx_acl_resource.route FROM onyx_acl_resource INNER JOIN onyx_acl_role ON onyx_acl_role.id = onyx_acl_resource.roleid ORDER BY onyx_acl_role.inheritance_order');
-        $results = $statement->execute();
-        // making the roles array
-        $roles = array();
-        foreach($results as $result){            
-            $roles[$result['name']][] = $result['route'];
-        }
-        return $roles;
-    }
+
 }
