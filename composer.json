@@ -17,7 +17,7 @@
     },
     "autoload": {
         "psr-0" : {
-            "System": "src/"
+            "OnyxAcl": "src/"
         },
         "classmap": [
             "./Module.php"
