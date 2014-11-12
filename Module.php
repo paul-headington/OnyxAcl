@@ -28,8 +28,8 @@ class Module
         $moduleRouteListener = new ModuleRouteListener();
         $moduleRouteListener->attach($eventManager);
         $this->initAcl($e);
-        $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_DISPATCH, array($this, 'checkAcl'));
-        $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_DISPATCH_ERROR, array($this, 'aclError'));
+        $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_ROUTE, array($this, 'checkAcl'), -1000000);
+        $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_DISPATCH_ERROR , array($this, 'aclError'), -1000000);
     }
 
     public function getConfig()
@@ -112,6 +112,7 @@ class Module
     }
 
     public function checkAcl(MvcEvent $e) {
+         
         $route = $e->getRouteMatch()->getMatchedRouteName();
         //you set your role this needs to load from user session
         $OnyxAcl = $e->getApplication()->getServiceManager()->get('OnyxAcl');
@@ -132,18 +133,28 @@ class Module
             }
         }catch(Exception $e){
         }
+        
+        
         if($denied){  
             $controller = $e->getTarget(); // grab Controller instance from event 
             $app = $e->getTarget();
             $route = $e->getRouteMatch();
-            if($ident == null){                
-                $controller->plugin('redirect')->toUrl('/user/login?backto=' . $route->getMatchedRouteName());
-                $e->stopPropagation();
-                return false;
+            $orginal = $route->getMatchedRouteName();
+            
+            if($ident == null){  
+                $route->setMatchedRouteName('user');
+                $route->setParam('controller', 'OnyxUser\Controller\User');
+                $route->setParam('action', 'login');
+                $route->setParam('__CONTROLLER__', 'OnyxUser');
+                $route->setParam('backto', $orginal);
+                //var_dump($route);die;
+                //$controller->plugin('redirect')->toUrl('/user/login?backto=' . $route->getMatchedRouteName());
+                //$e->stopPropagation();
+                //return false;
             }
-            $controller->plugin('redirect')->toUrl('/error/denied');
-            $e->stopPropagation();
-                return false;
+            //$controller->plugin('redirect')->toUrl('/error/denied');
+            //$e->stopPropagation();
+                //return false;
         }
         
     }    
