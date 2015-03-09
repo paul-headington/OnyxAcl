@@ -14,6 +14,8 @@ use Zend\Mvc\MvcEvent;
 use Zend\View\Model\ViewModel;
 use Zend\Authentication\AuthenticationService;
 use Zend\Authentication\Adapter\DbTable as DbTableAuthAdapter;
+use Zend\Stdlib\RequestInterface as Request;
+use Zend\View\Model\JsonModel;
 
 class Module
 {
@@ -21,7 +23,16 @@ class Module
     protected $loadFromDb = false;
     protected $tableName = 'acl';
     protected $denyUnlisted = FALSE;
-    
+
+    protected $contentTypes = array(
+        self::CONTENT_TYPE_JSON => array(
+            'application/hal+json',
+            'application/json'
+        )
+    );
+
+    const CONTENT_TYPE_JSON = 'json';
+
     public function onBootstrap(MvcEvent $e)
     {
         $eventManager        = $e->getApplication()->getEventManager();
@@ -47,14 +58,14 @@ class Module
             ),
         );
     }
-    
+
     public function getServiceConfig()
     {
         return array(
             'factories'=>array(
                 'OnyxAcl\AuthStorage' => function($sm){
-                    return new \OnyxAcl\AuthStorage('OnyxAcl_Auth'); 
-                },         
+                    return new \OnyxAcl\AuthStorage('OnyxAcl_Auth');
+                },
                 'AuthService' => function($sm) {
                     $config = $sm->get('Config');
                     $dbAdapter           = $sm->get('Zend\Db\Adapter\Adapter');
@@ -74,11 +85,11 @@ class Module
             ),
         );
     }
-    
-    public function initAcl(MvcEvent $e) { 
-        $e->getApplication()->getServiceManager()->get('OnyxAclFactory');   
+
+    public function initAcl(MvcEvent $e) {
+        $e->getApplication()->getServiceManager()->get('OnyxAclFactory');
     }
-    
+
     public function aclError(MvcEvent $event){
         $error = $event->getError();
         if (empty($error) || $error != $this->ACL_ERROR) {
@@ -112,7 +123,7 @@ class Module
     }
 
     public function checkAcl(MvcEvent $e) {
-         
+
         $route = $e->getRouteMatch()->getMatchedRouteName();
         //you set your role this needs to load from user session
         $OnyxAcl = $e->getApplication()->getServiceManager()->get('OnyxAcl');
@@ -123,7 +134,7 @@ class Module
         }
         $denied = false;
         try{
-            $acl = $e->getApplication()->getServiceManager()->get('OnyxAclFactory'); 
+            $acl = $e->getApplication()->getServiceManager()->get('OnyxAclFactory');
             if($acl->hasResource($route)) {
                 if(!$acl->isAllowed($userRole, $route)){
                     $denied = true;
@@ -132,16 +143,27 @@ class Module
                 $denied = $this->denyUnlisted;
             }
         }catch(Exception $e){
+
         }
-        
-        
-        if($denied){  
-            $controller = $e->getTarget(); // grab Controller instance from event 
+
+
+        if($denied){
+            $controller = $e->getTarget(); // grab Controller instance from event
             $app = $e->getTarget();
             $route = $e->getRouteMatch();
             $orginal = $route->getMatchedRouteName();
-            
-            if($ident == null){  
+
+            $request = $e->getRequest();
+
+            $isJson = $this->requestHasContentType($request, self::CONTENT_TYPE_JSON);
+
+            if($isJson){
+                $jsonData = array("status" => "FAIL", "message" => "Access Denied");
+                echo json_encode($jsonData);
+                exit();
+            }
+
+            if($ident == null){
                 $route->setMatchedRouteName('user');
                 $route->setParam('controller', 'OnyxUser\Controller\User');
                 $route->setParam('action', 'login');
@@ -156,8 +178,33 @@ class Module
             //$e->stopPropagation();
                 //return false;
         }
-        
-    }    
-    
+
+    }
+
+    public function requestHasContentType(Request $request, $contentType = '')
+    {
+        /** @var $headerContentType \Zend\Http\Header\ContentType */
+        $headerContentType = $request->getHeaders()->get('content-type');
+        if (!$headerContentType) {
+            return false;
+        }
+
+        $requestedContentType = $headerContentType->getFieldValue();
+        if (strstr($requestedContentType, ';')) {
+            $headerData = explode(';', $requestedContentType);
+            $requestedContentType = array_shift($headerData);
+        }
+        $requestedContentType = trim($requestedContentType);
+        if (array_key_exists($contentType, $this->contentTypes)) {
+            foreach ($this->contentTypes[$contentType] as $contentTypeValue) {
+                if (stripos($contentTypeValue, $requestedContentType) === 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
 
 }
