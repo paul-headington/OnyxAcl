@@ -81,6 +81,21 @@ class Module
                     $authService->setStorage($sm->get('OnyxAcl\AuthStorage'));
                     return $authService;
                 },
+                'AuthServiceNonActive' => function($sm) {
+                    $config = $sm->get('Config');
+                    $dbAdapter           = $sm->get('Zend\Db\Adapter\Adapter');
+                    $dbTableAuthAdapter  = new DbTableAuthAdapter($dbAdapter);
+                    $dbTableAuthAdapter
+                        ->setTableName($config['onyx_user']['auth_table'])
+                        ->setIdentityColumn($config['onyx_user']['identity_column'])
+                        ->setCredentialColumn($config['onyx_user']['credential_column'])
+                        ->setCredentialTreatment("SHA1(CONCAT(salt, ?, '".$config['onyx_user']['static_salt']. "'))");
+
+                    $authService = new AuthenticationService();
+                    $authService->setAdapter($dbTableAuthAdapter);
+                    $authService->setStorage($sm->get('OnyxAcl\AuthStorage'));
+                    return $authService;
+                },
                 'OnyxAclFactory' => 'OnyxAcl\Service\AclFactory',
             ),
         );

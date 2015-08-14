@@ -39,6 +39,7 @@ class Acl{
     
     protected $storage;
     protected $authservice;
+    protected $nonactive;
     protected $serviceManager;
     public $message; 
 
@@ -101,6 +102,48 @@ class Acl{
         return $output;
     }
     
+    public function authenticateNonActive($data = array()){
+        if(!isset($data['password'])){
+            throw new \Exception("No password set");
+        }
+        $config = $this->serviceManager->get('Config');
+        $identityColumn = $config['onyx_user']['identity_column'];
+        if(!isset($data[$identityColumn])){
+            throw new \Exception("No ".$identityColumn." set");
+        }
+        //check authentication...
+        $this->getAuthServiceNonActive()->getAdapter()
+                               ->setIdentity($data[$identityColumn])
+                               ->setCredential($data['password']);
+
+        $result = $this->getAuthServiceNonActive()->authenticate();
+        foreach($result->getMessages() as $message)
+        {
+            $this->message = $message;
+        }
+        
+        $output = $result->isValid();
+
+        if ($output) {            
+            //check if it has rememberMe :
+            if (isset($data['remeber'])) {
+                if($data['remeber'] == 1){
+                    $this->getSessionStorage()
+                         ->setRememberMe(1);
+                    //set storage again 
+                    $this->getAuthService()->setStorage($this->getSessionStorage());
+                }
+            }
+            $userData = $this->getAuthServiceNonActive()->getAdapter()
+                                   ->getResultRowObject(
+                                    null,
+                                    'password'
+                                    );
+            $this->getAuthServiceNonActive()->getStorage()->write($userData);
+        }
+        return $output;
+    }
+    
     public function logout(){
         $this->getSessionStorage()->forgetMe();
         $this->getAuthService()->clearIdentity();
@@ -114,6 +157,16 @@ class Acl{
         }
          
         return $this->authservice;
+    }
+    
+    private function getAuthServiceNonActive()
+    {
+        if (! $this->nonactive) {
+            $this->nonactive = $this->serviceManager
+                                      ->get('AuthServiceNonActive');
+        }
+         
+        return $this->nonactive;
     }
      
     private function getSessionStorage()
