@@ -74,7 +74,8 @@ class Module
                         ->setTableName($config['onyx_user']['auth_table'])
                         ->setIdentityColumn($config['onyx_user']['identity_column'])
                         ->setCredentialColumn($config['onyx_user']['credential_column'])
-                        ->setCredentialTreatment("SHA1(CONCAT(salt, ?, '".$config['onyx_user']['static_salt']. "')) AND isactive = 1");
+//                        ->setCredentialTreatment("SHA1(CONCAT(salt, ?, '".$config['onyx_user']['static_salt']. "')) AND isactive = 1"); // force out all non active accounts
+                        ->setCredentialTreatment("SHA1(CONCAT(salt, ?, '".$config['onyx_user']['static_salt']. "'))"); // handle patial logins if the user jacks out half way through
 
                     $authService = new AuthenticationService();
                     $authService->setAdapter($dbTableAuthAdapter);
